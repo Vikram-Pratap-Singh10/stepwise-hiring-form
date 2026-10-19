@@ -1,12 +1,14 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "stepwise-hiring-form",
   "private": true,
   "sideEffects": false,
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "build": "vite build && node scripts/prepare-dist.mjs",
+    "postbuild": "node scripts/prepare-dist.mjs",
+    "build:dev": "vite build --mode development && node scripts/prepare-dist.mjs",
+    "generate:favicon": "node scripts/generate-favicon.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",

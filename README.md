@@ -1,25 +1,55 @@
-# Stepwise Hiring Form
+# HIRE-VIA — Stepwise Hiring Form
 
-in reactjs+typescript build the for only one hire form
-so  form should be step wise, so i give you docs so check the all fields and write the reactjs project and form
+A modern, responsive multi-step registration form for **HIRE-VIA Manpower & Staffing Services** built with React, TypeScript, TanStack Router, Tailwind CSS, and Zod validation.
 
-This project was built with [Lovable](https://lovable.dev).
+## Features
 
-## Build with Lovable
+- **Multi-Step Form Flow**:
+  1. **Personal Details**: Contact information, address, date of birth, gender, and sales employee code.
+  2. **Job Preferences**: Role selection, preferred work location, employment types, experience, previous employer, expected salary, and joining date.
+  3. **Education & Skills**: Qualification, specialized skills, and languages known.
+  4. **Emergency Contact**: Emergency contact person details and relationship.
+  5. **Declarations & Background**: Accuracy declaration, police clearance certificate, and background verification consent.
+  6. **Review & Confirmation**: Full summary of submitted information with digital signature confirmation.
+- **Robust Validation**: Zod schema validation for all form steps.
+- **Responsive & Modern Design**: Clean UI with custom styled components, mobile-friendly navigation, and step indicators.
+- **Static Site Build**: Ready for deployment on any static hosting (Netlify, Vercel, GitHub Pages, Apache, Nginx, etc.) with pre-rendered HTML and assets in `dist/`.
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/33fee2f2-c677-4798-a8a8-1a10446eae06).
+## Getting Started
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+### Prerequisites
 
-## Development
+- Node.js (v18+)
+- npm or bun
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+### Installation
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+npm install
+```
+
+### Development
+
+To start the local development server:
+
+```sh
 npm run dev
+```
+
+### Production Build
+
+To build the static application into the `dist/` folder:
+
+```sh
+npm run build
+```
+
+The output will be generated in `dist/` containing `index.html` and all static assets ready for deployment.
+
+### Preview Build
+
+To preview the production build locally:
+
+```sh
+npm run preview
 ```
