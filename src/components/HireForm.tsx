@@ -250,7 +250,7 @@ export function HireForm() {
             <div className="rounded-lg border bg-muted/50 p-4">
               <h4 className="font-semibold">B. Criminal Record Declaration</h4>
               <p className="mt-1 text-sm text-muted-foreground">Please select one:</p>
-              {[["none", "I declare that, to the best of my knowledge, I have no criminal record."], ["disclose", "I need to disclose information for review."]].map(([v, l]) => (
+              {([["none", "I declare that, to the best of my knowledge, I have no criminal record."], ["disclose", "I need to disclose information for review."]] as const).map(([v, l]) => (
                 <label key={v} className="mt-2 flex items-start gap-2 text-sm">
                   <input type="radio" name="criminal" className="mt-0.5 size-4 accent-[var(--primary)]" checked={data.criminal === v} onChange={() => set("criminal", v)} />{l}
                 </label>
