@@ -72,7 +72,7 @@ const initial = {
 type Data = typeof initial;
 type K = keyof Data;
 
-function Field({ label, error, children, optional, full }: { label: string; error?: string; children: ReactNode; optional?: boolean; full?: boolean }) {
+function Field({ label, error, children, optional, full }: { label: string; error?: string | undefined; children: ReactNode; optional?: boolean; full?: boolean }) {
   return (
     <label className={`flex flex-col gap-1.5 ${full ? "sm:col-span-2" : ""}`}>
       <span className="text-sm font-semibold">
@@ -84,7 +84,7 @@ function Field({ label, error, children, optional, full }: { label: string; erro
   );
 }
 
-function Consent({ checked, onChange, title, text, error }: { checked: boolean; onChange: (v: boolean) => void; title: string; text: string; error?: string }) {
+function Consent({ checked, onChange, title, text, error }: { checked: boolean; onChange: (v: boolean) => void; title: string; text: string; error?: string | undefined }) {
   return (
     <div className="rounded-lg border bg-muted/50 p-4">
       <h4 className="font-semibold">{title}</h4>
@@ -113,7 +113,7 @@ export function HireForm() {
   );
 
   const validate = () => {
-    const r = schemas[step].safeParse(data);
+    const r = schemas[step]!.safeParse(data);
     if (r.success) { setErrors({}); return true; }
     const e: Partial<Record<K, string>> = {};
     r.error.issues.forEach((i) => { const k = i.path[0] as K; if (!e[k]) e[k] = i.message; });
