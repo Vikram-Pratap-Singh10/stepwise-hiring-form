@@ -1,22 +1,29 @@
 import { useState, type ReactNode } from "react";
 import { z } from "zod";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 
 const JOB_ROLES = ["Maid / Housekeeper", "Driver", "Chef / Cook", "Waiter / Waitress", "Nurse / Caregiver", "Pet Caretaker", "Other"] as const;
 const EMP_TYPES = ["Full-time", "Part-time", "Live-in", "Live-out"] as const;
+const AVAILABILITY = ["Immediate", "15 Days", "30 Days", "More than 30 days"] as const;
 const phone = z.string().trim().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number");
+const altPhone = z.string().trim().refine((v) => v === "" || /^[6-9]\d{9}$/.test(v), "Enter a valid 10-digit mobile number");
 const req = (m: string) => z.string().trim().min(1, m).max(200);
 
 const schemas = [
   z.object({
-    salesCode: z.string().trim().max(50),
+    referenceCode: z.string().trim().max(50),
     fullName: req("Full name is required"),
     mobile: phone,
     whatsapp: phone,
+    alternatePhone: altPhone,
     email: z.string().trim().email("Enter a valid email").max(255),
     dob: req("Date of birth is required"),
     gender: req("Select gender"),
-    address: z.string().trim().min(5, "Address is required").max(500),
+    houseNo: req("House / Flat No. is required"),
+    buildingName: z.string().trim().max(200),
+    street: req("Street / Road / Lane is required"),
+    landmark: z.string().trim().max(200),
+    locality: req("Locality / Area / Sector is required"),
     city: req("City is required"),
     state: req("State is required"),
     pin: z.string().trim().regex(/^\d{6}$/, "Enter a 6-digit PIN code"),
@@ -24,13 +31,13 @@ const schemas = [
   z.object({
     jobRole: req("Select a job role"),
     jobRoleOther: z.string().trim().max(100),
-    location: req("Preferred location is required"),
+    locations: z.array(z.string().trim().min(1).max(100)).min(1, "Add at least one location or PIN code"),
     employmentType: z.array(z.string()).min(1, "Select at least one"),
     experience: req("Experience is required"),
     prevEmployer: z.string().trim().max(200),
     prevRole: z.string().trim().max(200),
     salary: req("Expected salary is required"),
-    joinFrom: req("Select a joining date"),
+    joinFrom: req("Select availability"),
   }).refine((d) => d.jobRole !== "Other" || d.jobRoleOther.length > 0, { path: ["jobRoleOther"], message: "Please specify the role" }),
   z.object({
     education: req("Qualification is required"),
@@ -51,9 +58,6 @@ const schemas = [
     agreePrivacy: z.literal(true, { errorMap: () => ({ message: "Required" }) }),
   }).refine((d) => d.criminal !== "disclose" || d.criminalDetails.length > 0, { path: ["criminalDetails"], message: "Please provide details" }),
   z.object({
-    confirmName: req("Name is required"),
-    signature: req("Type your full name as signature"),
-    signDate: req("Date is required"),
     confirmReview: z.literal(true, { errorMap: () => ({ message: "Please confirm" }) }),
   }),
 ];
@@ -62,12 +66,13 @@ const STEPS = ["Personal", "Job", "Education", "Emergency", "Declaration", "Conf
 const today = new Date().toISOString().slice(0, 10);
 
 const initial = {
-  salesCode: "", fullName: "", mobile: "", whatsapp: "", email: "", dob: "", gender: "", address: "", city: "", state: "", pin: "",
-  jobRole: "", jobRoleOther: "", location: "", employmentType: [] as string[], experience: "", prevEmployer: "", prevRole: "", salary: "", joinFrom: "",
+  referenceCode: "", fullName: "", mobile: "", whatsapp: "", alternatePhone: "", email: "", dob: "", gender: "",
+  houseNo: "", buildingName: "", street: "", landmark: "", locality: "", city: "", state: "", pin: "",
+  jobRole: "", jobRoleOther: "", locations: [] as string[], employmentType: [] as string[], experience: "", prevEmployer: "", prevRole: "", salary: "", joinFrom: "",
   education: "", skills: "", languages: "",
   emName: "", emRelation: "", emNumber: "",
   agreeAccuracy: false, criminal: "", criminalDetails: "", agreePcc: false, agreeVerification: false, agreePrivacy: false,
-  confirmName: "", signature: "", signDate: today, confirmReview: false,
+  confirmReview: false,
 };
 type Data = typeof initial;
 type K = keyof Data;
@@ -103,6 +108,7 @@ export function HireForm() {
   const [data, setData] = useState<Data>(initial);
   const [errors, setErrors] = useState<Partial<Record<K, string>>>({});
   const [done, setDone] = useState<string | null>(null);
+  const [locInput, setLocInput] = useState("");
 
   const set = <T extends K>(k: T, v: Data[T]) => {
     setData((d) => ({ ...d, [k]: v }));
@@ -111,6 +117,14 @@ export function HireForm() {
   const text = (k: K, type = "text", placeholder = "") => (
     <input className="field" type={type} placeholder={placeholder} value={data[k] as string} max={type === "date" && k === "dob" ? today : undefined} onChange={(e) => set(k, e.target.value as never)} />
   );
+
+  const addLocation = () => {
+    const v = locInput.trim();
+    if (!v || data.locations.includes(v)) { setLocInput(""); return; }
+    set("locations", [...data.locations, v]);
+    setLocInput("");
+  };
+  const removeLocation = (v: string) => set("locations", data.locations.filter((x) => x !== v));
 
   const validate = () => {
     const r = schemas[step]!.safeParse(data);
@@ -138,7 +152,7 @@ export function HireForm() {
         <h2 className="mt-5 text-2xl font-bold">Registration submitted</h2>
         <p className="mt-2 text-muted-foreground">Thank you, {data.fullName}. Our team will contact you soon.</p>
         <p className="mt-4 inline-block rounded-md bg-secondary px-4 py-2 font-mono text-secondary-foreground">Registration ID: {done}</p>
-        <div><button className="mt-6 text-sm font-semibold text-primary underline" onClick={() => { setData(initial); setStep(0); setDone(null); }}>Register another candidate</button></div>
+        <div><button className="mt-6 text-sm font-semibold text-primary underline" onClick={() => { setData(initial); setStep(0); setDone(null); setLocInput(""); }}>Register another candidate</button></div>
       </div>
     );
   }
@@ -163,13 +177,14 @@ export function HireForm() {
 
         {step === 0 && (
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Salesperson Employee Code" optional error={errors.salesCode} full>{text("salesCode")}</Field>
-            <Field label="Full Name" error={errors.fullName} full>{text("fullName")}</Field>
+            <Field label="Reference Code" optional error={errors.referenceCode}>{text("referenceCode")}</Field>
+            <Field label="Full Name" error={errors.fullName}>{text("fullName")}</Field>
             <Field label="Mobile Number" error={errors.mobile}>{text("mobile", "tel", "10-digit number")}</Field>
             <Field label="WhatsApp Number" error={errors.whatsapp}>
               {text("whatsapp", "tel", "10-digit number")}
               <button type="button" className="self-start text-xs font-semibold text-primary" onClick={() => set("whatsapp", data.mobile)}>Same as mobile</button>
             </Field>
+            <Field label="Alternate Phone Number" optional error={errors.alternatePhone}>{text("alternatePhone", "tel", "10-digit number")}</Field>
             <Field label="Email Address" error={errors.email}>{text("email", "email")}</Field>
             <Field label="Date of Birth" error={errors.dob}>{text("dob", "date")}</Field>
             <Field label="Gender" error={errors.gender} full>
@@ -179,11 +194,14 @@ export function HireForm() {
                 ))}
               </div>
             </Field>
-            <Field label="Full Residential Address" error={errors.address} full>
-              <textarea className="field min-h-20" value={data.address} onChange={(e) => set("address", e.target.value)} />
-            </Field>
-            <Field label="City" error={errors.city}>{text("city")}</Field>
-            <Field label="State" error={errors.state}>{text("state")}</Field>
+            <p className="text-sm font-semibold sm:col-span-2">Full Residential Address</p>
+            <Field label="House / Flat No." error={errors.houseNo}>{text("houseNo", "text", "e.g., Flat 402")}</Field>
+            <Field label="Building / House Name" optional error={errors.buildingName}>{text("buildingName", "text", "e.g., Sea Breeze Towers")}</Field>
+            <Field label="Street / Road / Lane" error={errors.street} full>{text("street", "text", "e.g., 5th Main Road, Lane No. 2")}</Field>
+            <Field label="Landmark" optional error={errors.landmark} full>{text("landmark", "text", "e.g., Near Metro Station")}</Field>
+            <Field label="Locality / Area / Sector" error={errors.locality}>{text("locality", "text", "e.g., Indiranagar, Sector 62")}</Field>
+            <Field label="City" error={errors.city}>{text("city", "text", "e.g., Mumbai, Bengaluru")}</Field>
+            <Field label="State" error={errors.state}>{text("state", "text", "e.g., Maharashtra, Karnataka")}</Field>
             <Field label="PIN Code" error={errors.pin}>{text("pin", "text", "6 digits")}</Field>
           </div>
         )}
@@ -198,7 +216,30 @@ export function HireForm() {
               </div>
             </Field>
             {data.jobRole === "Other" && <Field label="Specify other role" error={errors.jobRoleOther} full>{text("jobRoleOther")}</Field>}
-            <Field label="Preferred Job Location" error={errors.location}>{text("location")}</Field>
+            <Field label="Preferred Job Location(s) / PIN Code(s)" error={errors.locations} full>
+              <div className="flex gap-2">
+                <input
+                  className="field"
+                  placeholder="e.g., Andheri West, 400053"
+                  value={locInput}
+                  onChange={(e) => setLocInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLocation(); } }}
+                />
+                <button type="button" onClick={addLocation} className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground hover:opacity-90">
+                  <Plus className="size-4" /> Add
+                </button>
+              </div>
+              {data.locations.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {data.locations.map((loc) => (
+                    <span key={loc} className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-sm text-secondary-foreground">
+                      {loc}
+                      <button type="button" aria-label={`Remove ${loc}`} onClick={() => removeLocation(loc)} className="text-secondary-foreground hover:text-destructive"><X className="size-3.5" /></button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </Field>
             <Field label="Total Work Experience" error={errors.experience}>
               <select className="field" value={data.experience} onChange={(e) => set("experience", e.target.value)}>
                 <option value="">Select</option>
@@ -216,7 +257,16 @@ export function HireForm() {
             <Field label="Previous Employer / Company" optional>{text("prevEmployer")}</Field>
             <Field label="Previous Job Role" optional>{text("prevRole")}</Field>
             <Field label="Expected Salary (₹ / month)" error={errors.salary}>{text("salary", "number")}</Field>
-            <Field label="Available to Join From" error={errors.joinFrom}>{text("joinFrom", "date")}</Field>
+            <Field label="Available to Join From" error={errors.joinFrom} full>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {AVAILABILITY.map((a) => (
+                  <label key={a} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-sm ${data.joinFrom === a ? "border-primary bg-secondary font-semibold text-secondary-foreground" : "bg-card"}`}>
+                    <input type="radio" name="joinFrom" className="size-4 accent-[var(--primary)]" checked={data.joinFrom === a} onChange={() => set("joinFrom", a)} />
+                    {a}
+                  </label>
+                ))}
+              </div>
+            </Field>
           </div>
         )}
 
@@ -273,19 +323,16 @@ export function HireForm() {
         )}
 
         {step === 5 && (
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground sm:col-span-2">
+          <div className="grid gap-5">
+            <div className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">
               <p className="font-semibold">Summary</p>
               <p className="mt-1">{data.fullName} · {data.mobile} · {data.email}</p>
-              <p>{data.jobRole === "Other" ? data.jobRoleOther : data.jobRole} · {data.employmentType.join(", ")} · {data.location}</p>
+              <p>{data.houseNo}, {data.buildingName ? data.buildingName + ", " : ""}{data.street}, {data.locality}, {data.city}, {data.state} – {data.pin}</p>
+              <p>{data.jobRole === "Other" ? data.jobRoleOther : data.jobRole} · {data.employmentType.join(", ")} · {data.locations.join(", ")}</p>
+              <p>Available to join: {data.joinFrom}</p>
               <button type="button" className="mt-2 text-xs font-semibold underline" onClick={() => setStep(0)}>Edit details</button>
             </div>
-            <Field label="Candidate Name" error={errors.confirmName}>{text("confirmName")}</Field>
-            <Field label="Date" error={errors.signDate}>{text("signDate", "date")}</Field>
-            <Field label="Candidate Signature (type full name)" error={errors.signature} full>
-              <input className="field font-display text-xl italic" value={data.signature} onChange={(e) => set("signature", e.target.value)} />
-            </Field>
-            <label className="flex items-start gap-2 text-sm sm:col-span-2">
+            <label className="flex items-start gap-2 text-sm">
               <input type="checkbox" className="mt-0.5 size-4 accent-[var(--primary)]" checked={data.confirmReview} onChange={(e) => set("confirmReview", e.target.checked)} />
               I confirm that I have reviewed the information provided and agree to the declarations and consents selected above.
             </label>
