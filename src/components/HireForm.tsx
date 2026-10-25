@@ -19,6 +19,8 @@ const schemas = [
     email: z.string().trim().email("Enter a valid email").max(255),
     dob: req("Date of birth is required"),
     gender: req("Select gender"),
+  }),
+  z.object({
     houseNo: req("House / Flat No. is required"),
     buildingName: z.string().trim().max(200),
     street: req("Street / Road / Lane is required"),
@@ -62,7 +64,7 @@ const schemas = [
   }),
 ];
 
-const STEPS = ["Personal", "Job", "Education", "Emergency", "Declaration", "Confirm"];
+const STEPS = ["Personal", "Address", "Job", "Education", "Emergency", "Declaration", "Confirm"];
 const today = new Date().toISOString().slice(0, 10);
 
 const initial = {
@@ -172,7 +174,7 @@ export function HireForm() {
 
       <div className="p-6 sm:p-8">
         <h2 className="mb-6 text-xl font-bold">
-          {["1. Personal Details", "2. Job Details", "3. Education & Skills", "4. Emergency Contact Details", "5. Declaration & Consent", "6. Candidate Confirmation"][step]}
+          {["1. Personal Details", "2. Address Details", "3. Job Details", "4. Education & Skills", "5. Emergency Contact Details", "6. Declaration & Consent", "7. Candidate Confirmation"][step]}
         </h2>
 
         {step === 0 && (
@@ -194,6 +196,11 @@ export function HireForm() {
                 ))}
               </div>
             </Field>
+          </div>
+        )}
+
+        {step === 1 && (
+          <div className="grid gap-5 sm:grid-cols-2">
             <p className="text-sm font-semibold sm:col-span-2">Full Residential Address</p>
             <Field label="House / Flat No." error={errors.houseNo}>{text("houseNo", "text", "e.g., Flat 402")}</Field>
             <Field label="Building / House Name" optional error={errors.buildingName}>{text("buildingName", "text", "e.g., Sea Breeze Towers")}</Field>
@@ -206,7 +213,7 @@ export function HireForm() {
           </div>
         )}
 
-        {step === 1 && (
+        {step === 2 && (
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Job Role Applied For" error={errors.jobRole} full>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -270,7 +277,7 @@ export function HireForm() {
           </div>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <div className="grid gap-5">
             <Field label="Highest Educational Qualification" error={errors.education}>
               <select className="field" value={data.education} onChange={(e) => set("education", e.target.value)}>
@@ -285,7 +292,7 @@ export function HireForm() {
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Emergency Contact Name" error={errors.emName} full>{text("emName")}</Field>
             <Field label="Relationship" error={errors.emRelation}>{text("emRelation")}</Field>
@@ -293,7 +300,7 @@ export function HireForm() {
           </div>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <div className="grid gap-4">
             <Consent title="A. Information Accuracy" checked={data.agreeAccuracy} onChange={(v) => set("agreeAccuracy", v)} error={errors.agreeAccuracy}
               text="I declare that the information provided in this registration form is true and accurate to the best of my knowledge. I understand that providing false or misleading information may affect my registration or placement." />
@@ -322,7 +329,7 @@ export function HireForm() {
           </div>
         )}
 
-        {step === 5 && (
+        {step === 6 && (
           <div className="grid gap-5">
             <div className="rounded-lg bg-secondary p-4 text-sm text-secondary-foreground">
               <p className="font-semibold">Summary</p>
