@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { HireForm } from "@/components/HireForm";
 
 export const Route = createFileRoute("/")({
@@ -26,6 +26,9 @@ function Index() {
       <main className="mx-auto -mt-20 max-w-3xl px-4 pb-16">
         <HireForm />
       </main>
+      <footer className="pb-10 text-center">
+        <Link to="/maideazy" className="text-sm font-semibold text-primary underline">MAIDEAZY Job Seeker Registration &rarr;</Link>
+      </footer>
     </div>
   );
 }
