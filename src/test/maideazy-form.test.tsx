@@ -22,34 +22,48 @@ const base = {
   gender: "Female",
   address: "Flat 402, Sea Breeze Towers",
   city: "Mumbai",
-  pincodes: ["400001"],
+  pin: "400001",
   jobRoles: ["Cooking Assistant"],
   otherRole: "",
+  jobLocations: [{ pin: "110001", area: "Connaught Place, New Delhi, Delhi" }],
   workType: ["Full-time"],
   salary: "15000",
 };
 
 describe("MAIDEAZY form rules", () => {
-  it("accepts a valid form with multiple PIN codes", () => {
-    expect(maideazySchema.safeParse({ ...base, pincodes: ["400001", "110001"] }).success).toBe(true);
+  it("accepts a valid form with a single address PIN and multiple job locations", () => {
+    expect(
+      maideazySchema.safeParse({
+        ...base,
+        jobLocations: [
+          { pin: "110001", area: "Connaught Place, New Delhi, Delhi" },
+          { pin: "560001", area: "Bengaluru, Karnataka" },
+        ],
+      }).success,
+    ).toBe(true);
   });
 
-  it("requires at least one PIN code", () => {
-    expect(maideazySchema.safeParse({ ...base, pincodes: [] }).success).toBe(false);
+  it("requires one 6-digit PIN code for the permanent address", () => {
+    expect(maideazySchema.safeParse({ ...base, pin: "" }).success).toBe(false);
+    expect(maideazySchema.safeParse({ ...base, pin: "40001" }).success).toBe(false);
+    expect(maideazySchema.safeParse({ ...base, pin: "4000012" }).success).toBe(false);
   });
 
-  it("rejects PIN codes that are not 6 digits", () => {
-    expect(maideazySchema.safeParse({ ...base, pincodes: ["40001"] }).success).toBe(false);
+  it("requires at least one preferred job location", () => {
+    expect(maideazySchema.safeParse({ ...base, jobLocations: [] }).success).toBe(false);
+  });
+
+  it("requires an area for every preferred job location", () => {
+    expect(maideazySchema.safeParse({ ...base, jobLocations: [{ pin: "110001", area: "" }] }).success).toBe(false);
+  });
+
+  it("rejects preferred job location PIN codes that are not 6 digits", () => {
+    expect(maideazySchema.safeParse({ ...base, jobLocations: [{ pin: "11001", area: "Delhi" }] }).success).toBe(false);
   });
 
   it("requires other-role detail only when Other is selected", () => {
     expect(maideazySchema.safeParse({ ...base, jobRoles: ["Other"], otherRole: "" }).success).toBe(false);
     expect(maideazySchema.safeParse({ ...base, jobRoles: ["Other"], otherRole: "Driver" }).success).toBe(true);
-  });
-
-  it("validates without signature, date or preferred job location fields", () => {
-    expect(maideazySchema.safeParse(base).success).toBe(true);
-    expect(JSON.stringify(maideazySchema.safeParse(base))).not.toContain("preferredLocation");
   });
 });
 

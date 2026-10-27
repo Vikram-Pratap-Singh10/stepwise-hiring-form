@@ -19,16 +19,20 @@ export const schema = z.object({
   gender: req("Select gender"),
   address: z.string().trim().min(5, "Address is required").max(500),
   city: req("City is required"),
-  pincodes: z.array(z.string().regex(PIN_RE, "Enter a 6-digit PIN code")).min(1, "Add at least one PIN code"),
+  pin: z.string().regex(PIN_RE, "Enter a 6-digit PIN code"),
   jobRoles: z.array(z.string()).min(1, "Select at least one job role"),
   otherRole: z.string().trim().max(100),
+  jobLocations: z.array(z.object({
+    pin: z.string().regex(PIN_RE, "Enter a 6-digit PIN code"),
+    area: z.string().trim().min(1, "Enter the area for this PIN code"),
+  })).min(1, "Add at least one preferred job location"),
   workType: z.array(z.string()).min(1, "Select at least one work type"),
   salary: z.string().trim().max(20),
 }).refine((d) => !d.jobRoles.includes("Other") || d.otherRole.length > 0, { path: ["otherRole"], message: "Please specify the role" });
 
 const initial = {
   salesCode: "", fullName: "", mobile: "", dob: "", gender: "", address: "", city: "",
-  pincodes: [] as string[], jobRoles: [] as string[], otherRole: "", workType: [] as string[], salary: "",
+  pin: "", jobRoles: [] as string[], otherRole: "", jobLocations: [] as { pin: string; area: string }[], workType: [] as string[], salary: "",
 };
 type Data = typeof initial;
 type K = keyof Data;
@@ -52,8 +56,8 @@ export function MaideazyForm() {
   const [errors, setErrors] = useState<Partial<Record<K, string>>>({});
   const [done, setDone] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [pinInput, setPinInput] = useState("");
-  const [pinError, setPinError] = useState("");
+  const [locInput, setLocInput] = useState("");
+  const [locError, setLocError] = useState("");
   const [pinAreas, setPinAreas] = useState<Record<string, PinAreaState>>({});
   const lookupPinFn = useServerFn(lookupPin);
 
@@ -72,25 +76,30 @@ export function MaideazyForm() {
   const runLookup = (pin: string) => {
     setPinAreas((m) => {
       if (m[pin]) return m;
-      void lookupPinFn({ data: { pin } }).then((r) =>
+      void lookupPinFn({ data: { pin } }).then((r) => {
         setPinAreas((cur) => ({
           ...cur,
           [pin]: { loading: false, areas: r.areas, error: r.status === "ok" ? undefined : r.status === "not_found" ? "Area not found for this PIN code" : "Area lookup failed, try again" },
-        })),
-      );
+        }));
+        if (r.status === "ok" && r.areas.length > 0) {
+          setData((d) => ({ ...d, jobLocations: d.jobLocations.map((l) => (l.pin === pin && !l.area ? { ...l, area: r.areas.join(", ") } : l)) }));
+        }
+      });
       return { ...m, [pin]: { loading: true, areas: [] } };
     });
   };
-  const addPin = () => {
-    const v = pinInput.trim();
-    if (!PIN_RE.test(v)) { setPinError("Enter a 6-digit PIN code"); return; }
-    if (!data.pincodes.includes(v)) {
-      set("pincodes", [...data.pincodes, v]);
+
+  const addLocation = () => {
+    const v = locInput.trim();
+    if (!PIN_RE.test(v)) { setLocError("Enter a 6-digit PIN code"); return; }
+    if (!data.jobLocations.some((l) => l.pin === v)) {
+      set("jobLocations", [...data.jobLocations, { pin: v, area: "" }]);
       runLookup(v);
     }
-    setPinInput("");
+    setLocInput("");
   };
-  const removePin = (p: string) => set("pincodes", data.pincodes.filter((x) => x !== p));
+  const setLocationArea = (pin: string, area: string) =>
+    setData((d) => ({ ...d, jobLocations: d.jobLocations.map((l) => (l.pin === pin ? { ...l, area } : l)) }));
 
   const areaText = (a: PinAreaState | undefined) => {
     if (!a) return "";
@@ -102,6 +111,7 @@ export function MaideazyForm() {
 
   const summaryText = () => {
     const role = data.jobRoles.map((r) => (r === "Other" ? `Other: ${data.otherRole}` : r)).join(", ");
+    const locs = data.jobLocations.map((l) => (l.area ? `${l.pin} — ${l.area}` : l.pin)).join("; ");
     return [
       "MAIDEAZY — Job Seeker Registration",
       `Reference Code: ${data.salesCode || "-"}`,
@@ -111,8 +121,9 @@ export function MaideazyForm() {
       `Gender: ${data.gender}`,
       `Full Residential Address: ${data.address}`,
       `City: ${data.city}`,
-      `PIN Code(s): ${data.pincodes.join(", ")}`,
+      `PIN Code: ${data.pin}`,
       `Job Role: ${role}`,
+      `Preferred Job Location: ${locs}`,
       `Work Type: ${data.workType.join(", ")}`,
       `Expected Salary (₹): ${data.salary || "-"}`,
     ].join("\n");
@@ -131,7 +142,11 @@ export function MaideazyForm() {
     const r = schema.safeParse(data);
     if (!r.success) {
       const e: Partial<Record<K, string>> = {};
-      r.error.issues.forEach((i) => { const k = i.path[0] as K; if (!e[k]) e[k] = i.message; });
+      r.error.issues.forEach((i) => {
+        const p = i.path[0];
+        const k = (typeof p === "number" ? "jobLocations" : p) as K;
+        if (!e[k]) e[k] = i.message;
+      });
       setErrors(e);
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -152,7 +167,7 @@ export function MaideazyForm() {
           <button type="button" onClick={copyForm} className="inline-flex items-center gap-2 rounded-lg bg-me-gold px-5 py-2.5 text-sm font-bold text-foreground hover:opacity-90">
             <Copy className="size-4" /> {copied ? "Copied!" : "Copy Completed Form"}
           </button>
-          <button type="button" className="text-sm font-semibold text-primary underline" onClick={() => { setData(initial); setDone(null); setCopied(false); setPinInput(""); setPinAreas({}); }}>Register another candidate</button>
+          <button type="button" className="text-sm font-semibold text-primary underline" onClick={() => { setData(initial); setDone(null); setCopied(false); setLocInput(""); setPinAreas({}); }}>Register another candidate</button>
         </div>
       </div>
     );
@@ -183,42 +198,21 @@ export function MaideazyForm() {
           <textarea className="field min-h-20" value={data.address} onChange={(e) => set("address", e.target.value)} />
         </Field>
         <Field label="City" error={errors.city}>{text("city")}</Field>
-        <Field label="PIN Code(s)" error={errors.pincodes} full>
-          <div className="flex gap-2">
-            <input
-              className="field"
-              inputMode="numeric"
-              placeholder="Enter 6-digit PIN code"
-              maxLength={6}
-              value={pinInput}
-              onChange={(e) => {
-                const v = e.target.value.replace(/\D/g, "").slice(0, 6);
-                setPinInput(v);
-                setPinError("");
-                if (PIN_RE.test(v)) runLookup(v);
-              }}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPin(); } }}
-            />
-            <button type="button" onClick={addPin} className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-me-gold px-3 text-sm font-semibold text-foreground hover:opacity-90">
-              <Plus className="size-4" /> Add
-            </button>
-          </div>
-          {pinError && <span className="text-xs text-destructive">{pinError}</span>}
-          {data.pincodes.length > 0 && (
-            <div className="flex flex-col gap-2">
-              {data.pincodes.map((p) => {
-                const a = pinAreas[p];
-                return (
-                  <div key={p} className="flex items-start justify-between gap-2 rounded-lg border border-me-gold/40 bg-card px-3 py-2 text-sm">
-                    <span>
-                      <span className="font-mono font-semibold">{p}</span>
-                      {areaText(a) && <span className="block text-xs text-muted-foreground">{areaText(a)}</span>}
-                    </span>
-                    <button type="button" aria-label={`Remove ${p}`} onClick={() => removePin(p)} className="text-muted-foreground hover:text-destructive"><X className="size-4" /></button>
-                  </div>
-                );
-              })}
-            </div>
+        <Field label="PIN Code" error={errors.pin}>
+          <input
+            className="field"
+            inputMode="numeric"
+            placeholder="6-digit PIN code of the permanent address"
+            maxLength={6}
+            value={data.pin}
+            onChange={(e) => {
+              const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+              set("pin", v);
+              if (PIN_RE.test(v)) runLookup(v);
+            }}
+          />
+          {PIN_RE.test(data.pin) && areaText(pinAreas[data.pin]) && (
+            <span className="text-xs text-muted-foreground">{areaText(pinAreas[data.pin])}</span>
           )}
         </Field>
       </div>
@@ -242,6 +236,49 @@ export function MaideazyForm() {
             <input className="field" placeholder="Specify other role" value={data.otherRole} onChange={(e) => set("otherRole", e.target.value)} />
           )}
           {errors.otherRole && <span className="text-xs text-destructive">{errors.otherRole}</span>}
+        </Field>
+        <Field label="Preferred Job Location" error={errors.jobLocations} full>
+          <p className="-mt-1 text-xs text-muted-foreground">Add one or more PIN codes — the area is filled in automatically, and you can edit it if it is wrong or missing.</p>
+          <div className="flex gap-2">
+            <input
+              className="field"
+              inputMode="numeric"
+              placeholder="Enter 6-digit PIN code"
+              maxLength={6}
+              value={locInput}
+              onChange={(e) => {
+                const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+                setLocInput(v);
+                setLocError("");
+                if (PIN_RE.test(v)) runLookup(v);
+              }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLocation(); } }}
+            />
+            <button type="button" onClick={addLocation} className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-me-gold px-3 text-sm font-semibold text-foreground hover:opacity-90">
+              <Plus className="size-4" /> Add
+            </button>
+          </div>
+          {locError && <span className="text-xs text-destructive">{locError}</span>}
+          {data.jobLocations.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {data.jobLocations.map((l) => {
+                const a = pinAreas[l.pin];
+                const placeholder = a?.loading ? "Looking up area…" : a && (a.error || a.areas.length === 0) ? "Area not found — enter it manually" : "Enter area";
+                return (
+                  <div key={l.pin} className="flex items-center gap-2 rounded-lg border border-me-gold/40 bg-card px-3 py-2 text-sm">
+                    <span className="font-mono font-semibold">{l.pin}</span>
+                    <input
+                      className="field flex-1 text-xs"
+                      placeholder={placeholder}
+                      value={l.area}
+                      onChange={(e) => setLocationArea(l.pin, e.target.value)}
+                    />
+                    <button type="button" aria-label={`Remove ${l.pin}`} onClick={() => set("jobLocations", data.jobLocations.filter((x) => x.pin !== l.pin))} className="shrink-0 text-muted-foreground hover:text-destructive"><X className="size-4" /></button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Field>
         <Field label="Work Type" error={errors.workType} full>
           <div className="grid gap-2 sm:grid-cols-2">
