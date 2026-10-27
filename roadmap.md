@@ -8,3 +8,5 @@
 - [x] MAIDEAZY: remove Applicant Signature, Date and Preferred Job Location
 - [x] MAIDEAZY: multiple PIN codes with automatic area lookup per PIN code
 - [x] MAIDEAZY: job role supports multiple selection (checkboxes)
+- [x] MAIDEAZY: single PIN code back in the permanent address
+- [x] MAIDEAZY: Preferred Job Location with multiple PIN codes, area lookup and editable area
